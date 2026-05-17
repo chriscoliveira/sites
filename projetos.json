@@ -1,0 +1,19 @@
+// projetos.json
+
+[
+  {
+    "nome": "Calculadora 3D",
+    "link": "https://seuusuario.github.io/calculadora3d/",
+    "tag": "Python"
+  },
+  {
+    "nome": "Painel Zabbix",
+    "link": "https://seuusuario.github.io/zabbix/",
+    "tag": "Monitoramento"
+  },
+  {
+    "nome": "Flashcards Alemão",
+    "link": "https://seuusuario.github.io/alemao/",
+    "tag": "Idioma"
+  }
+]
