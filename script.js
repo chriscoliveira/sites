@@ -1,30 +1,43 @@
-// script.js
+async function carregarProjetos() {
 
-async function carregarProjetos(){
+    try {
 
-    const resposta = await fetch("projetos.json");
-    const projetos = await resposta.json();
+        const resposta = await fetch("./projetos.json");
 
-    const container = document.getElementById("container");
+        const projetos = await resposta.json();
 
-    projetos.forEach(projeto => {
+        const container = document.getElementById("container");
 
-        const card = document.createElement("div");
-        card.className = "card";
+        projetos.forEach(projeto => {
 
-        card.innerHTML = `
-            <a href="${projeto.link}" target="_blank">
-                ${projeto.nome}
-            </a>
+            const card = document.createElement("div");
 
-            <div class="tag">
-                ${projeto.tag || "Projeto"}
-            </div>
+            card.classList.add("card");
+
+            card.innerHTML = `
+                <a href="${projeto.link}" target="_blank">
+                    ${projeto.nome}
+                </a>
+
+                <div class="tag">
+                    ${projeto.tag || "Projeto"}
+                </div>
+            `;
+
+            container.appendChild(card);
+
+        });
+
+    } catch (erro) {
+
+        console.error("Erro ao carregar JSON:", erro);
+
+        document.getElementById("container").innerHTML = `
+            <p style="color:red;">
+                Erro ao carregar projetos.json
+            </p>
         `;
-
-        container.appendChild(card);
-
-    });
+    }
 
 }
 
