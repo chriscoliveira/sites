@@ -2,18 +2,29 @@
 
 [
   {
-    "nome": "Calculadora 3D",
-    "link": "https://seuusuario.github.io/calculadora3d/",
-    "tag": "Python"
-  },
-  {
-    "nome": "Painel Zabbix",
-    "link": "https://seuusuario.github.io/zabbix/",
-    "tag": "Monitoramento"
-  },
-  {
     "nome": "Flashcards Alemão",
-    "link": "https://seuusuario.github.io/alemao/",
+    "link": "https://chriscoliveira.github.io/deutsch-deck/",
     "tag": "Idioma"
+  },
+  {
+    "nome": "Conversor ANKI-Flashcards",
+    "link": "https://chriscoliveira.github.io/deutsch-deck/conversor.html",
+    "tag": "Idioma"
+  },
+  {
+    "nome": "Calculadora 3D",
+    "link": "https://chriscoliveira.github.io/custo3d/",
+    "tag": "Impressão 3D"
+  },
+  {
+    "nome": "Flashcards Libras",
+    "link": "https://chriscoliveira.github.io/libras/",
+    "tag": "Idioma"
+  },
+  
+  {
+    "nome": "Guia Instalacao PDV",
+    "link": "https://chriscoliveira.github.io/pdv/",
+    "tag": "Tenda"
   }
 ]
