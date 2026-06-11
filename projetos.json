@@ -1,14 +1,5 @@
 [
-  {
-    "nome": "Flashcards Alemão",
-    "link": "https://chriscoliveira.github.io/deutsch-deck/",
-    "tag": "Idioma"
-  },
-  {
-    "nome": "Conversor ANKI-Flashcards",
-    "link": "https://chriscoliveira.github.io/deutsch-deck/conversor.html",
-    "tag": "Idioma"
-  },
+
   {
     "nome": "Calculadora 3D",
     "link": "https://chriscoliveira.github.io/custo3d/",
@@ -18,6 +9,16 @@
     "nome": "Contas Pagar",
     "link": "https://chriscoliveira.github.io/contaspagar/",
     "tag": "Contas"
+  },
+  {
+    "nome": "Flashcards Alemão",
+    "link": "https://chriscoliveira.github.io/deutsch-deck/",
+    "tag": "Idioma"
+  },
+  {
+    "nome": "Conversor ANKI-Flashcards",
+    "link": "https://chriscoliveira.github.io/deutsch-deck/conversor.html",
+    "tag": "Idioma"
   },
   {
     "nome": "Flashcards Libras",
