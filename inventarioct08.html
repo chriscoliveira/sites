@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Inventário de Equipamentos CT08</title>
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<style>
+  :root{
+    --bg: #14161a;
+    --panel: #1d2025;
+    --panel-2: #23262c;
+    --border: #33373f;
+    --text: #e9e9ea;
+    --muted: #8b8f98;
+    --tag: #e08a2c;
+    --tag-dim: #6b4a1f;
+    --ok: #4caf7d;
+    --err: #d9534f;
+    --mono: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .wrap{max-width:520px;margin:0 auto;padding:18px 16px 60px;}
+  header{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:6px 2px 18px;border-bottom:2px solid var(--tag);margin-bottom:18px;
+  }
+  header h1{font-size:18px;margin:0;letter-spacing:.02em;}
+  header .eyebrow{font-family:var(--mono);font-size:11px;color:var(--tag);letter-spacing:.12em;text-transform:uppercase;}
+
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:14px;}
+  .field{margin-bottom:14px;}
+  label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px;letter-spacing:.03em;}
+  input[type=text], textarea, select{
+    width:100%;background:var(--panel-2);border:1px solid var(--border);color:var(--text);
+    padding:11px 12px;border-radius:8px;font-size:15px;font-family:inherit;
+  }
+  textarea{resize:vertical;min-height:56px;}
+  .code-row{display:flex;gap:8px;}
+  .code-row input{font-family:var(--mono);letter-spacing:.02em;}
+  .mono-input{font-family:var(--mono);letter-spacing:.02em;}
+  .scan-btn{
+    flex-shrink:0;background:var(--tag-dim);border:1px solid var(--tag);color:#ffd9ad;
+    border-radius:8px;padding:0 14px;font-size:18px;display:flex;align-items:center;justify-content:center;
+  }
+  .scan-btn:active{background:var(--tag);color:#1a1200;}
+
+  .submit-btn{
+    width:100%;background:var(--tag);color:#1a1200;border:none;border-radius:9px;
+    padding:14px;font-size:15px;font-weight:700;letter-spacing:.02em;
+  }
+  .submit-btn:disabled{opacity:.5;}
+  .hint{font-size:11px;color:var(--muted);margin-top:8px;line-height:1.5;}
+
+  .settings-label{font-family:var(--mono);font-size:11px;color:var(--tag);text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px;}
+
+  #toast{
+    position:fixed;left:16px;right:16px;bottom:20px;max-width:488px;margin:0 auto;
+    padding:13px 15px;border-radius:9px;font-size:14px;font-weight:600;
+    transform:translateY(120%);transition:transform .25s ease;z-index:50;
+  }
+  #toast.show{transform:translateY(0);}
+  #toast.ok{background:var(--ok);color:#06210f;}
+  #toast.err{background:var(--err);color:#2a0a08;}
+
+  #scanner-overlay{
+    display:none;position:fixed;inset:0;background:#000;z-index:100;
+    flex-direction:column;
+  }
+  #scanner-overlay.open{display:flex;}
+  #reader{flex:1;}
+  .scanner-bar{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:14px 16px;background:#0c0d0f;color:#fff;
+  }
+  .scanner-bar span{font-family:var(--mono);font-size:13px;color:var(--tag);text-transform:uppercase;letter-spacing:.08em;}
+  .close-scan{background:none;border:1px solid #444;color:#fff;border-radius:8px;padding:8px 14px;font-size:14px;}
+
+  .log{margin-top:2px;}
+  .log-item{
+    display:flex;justify-content:space-between;gap:10px;padding:9px 0;
+    border-bottom:1px solid var(--border);font-size:13px;
+  }
+  .log-item:last-child{border-bottom:none;}
+  .log-item .name{font-weight:600;}
+  .log-item .meta{color:var(--muted);font-family:var(--mono);font-size:11px;text-align:right;}
+  .empty{color:var(--muted);font-size:13px;padding:6px 0;}
+
+  .export-row{display:flex;gap:8px;margin-top:14px;}
+  .export-btn{
+    flex:1;background:var(--panel-2);border:1px solid var(--border);color:var(--text);
+    border-radius:8px;padding:11px;font-size:13px;font-weight:600;
+  }
+  .export-btn:active{border-color:var(--tag);color:var(--tag);}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <div>
+      <div class="eyebrow">SJC CT08 · Inventário</div>
+      <h1>Cadastro de Equipamentos</h1>
+    </div>
+  </header>
+
+  <div class="card">
+    <div class="field">
+      <label for="f-nome">Nome do equipamento</label>
+      <input type="text" id="f-nome" placeholder="Ex: Notebook Dell Latitude">
+    </div>
+
+    <div class="field">
+      <label for="f-serie">Número de série</label>
+      <div class="code-row">
+        <input type="text" id="f-serie" placeholder="Escaneie ou digite">
+        <button class="scan-btn" type="button" data-target="f-serie">📷</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="f-patrimonio">Patrimônio</label>
+      <div class="code-row">
+        <input type="text" id="f-patrimonio" placeholder="Escaneie ou digite">
+        <button class="scan-btn" type="button" data-target="f-patrimonio">📷</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="f-setor">Setor</label>
+      <input type="text" id="f-setor" placeholder="Ex: Depósito, Caixa, Escritório">
+    </div>
+
+    <div class="field">
+      <label for="f-fabricante">Fabricante</label>
+      <input type="text" id="f-fabricante" placeholder="Ex: Dell, HP, Lenovo">
+    </div>
+
+    <div class="field">
+      <label for="f-modelo">Modelo</label>
+      <input type="text" id="f-modelo" placeholder="Ex: Latitude 5420">
+    </div>
+
+    <div class="field">
+      <label for="f-mac">Endereço MAC</label>
+      <input type="text" id="f-mac" class="mono-input" placeholder="00:1A:2B:3C:4D:5E">
+    </div>
+
+    <div class="field">
+      <label for="f-ip">IP</label>
+      <input type="text" id="f-ip" class="mono-input" placeholder="192.168.0.10">
+    </div>
+
+    <div class="field">
+      <label for="f-descricao">Descrição</label>
+      <textarea id="f-descricao" placeholder="O que é / características"></textarea>
+    </div>
+
+    <div class="field" style="margin-bottom:16px;">
+      <label for="f-obs">Observação</label>
+      <textarea id="f-obs" placeholder="Estado, avarias, detalhes adicionais"></textarea>
+    </div>
+
+    <button class="submit-btn" id="btn-save" type="button">Salvar equipamento</button>
+  </div>
+
+  <div class="card">
+    <div class="settings-label">Equipamentos cadastrados</div>
+    <div class="log" id="log-list">
+      <div class="empty">Carregando...</div>
+    </div>
+    <div class="export-row">
+      <button class="export-btn" id="btn-export-csv" type="button">Exportar CSV</button>
+      <button class="export-btn" id="btn-export-xls" type="button">Exportar Excel</button>
+    </div>
+  </div>
+</div>
+
+<div id="scanner-overlay">
+  <div class="scanner-bar">
+    <span id="scanner-label">Escaneando</span>
+    <button class="close-scan" id="close-scan" type="button">Fechar</button>
+  </div>
+  <div id="reader"></div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+  // Configuração do Airtable (uso pessoal, fixo no código)
+  const AIRTABLE_CONFIG = {
+    baseId: 'appySI60jPM8Ppgmi',
+    table: 'ct08',
+    token: 'patlCHckOgao34SIf.5f2ed272467b9a423e0272266596a346431750846df59fdea1c71d757d991f92'
+  };
+
+  function toast(msg, type){
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = type;
+    requestAnimationFrame(() => t.classList.add('show'));
+    setTimeout(() => t.classList.remove('show'), 3200);
+  }
+
+  // ---- Scanner ----
+  let html5Qrcode = null;
+  let scanTargetId = null;
+  const overlay = document.getElementById('scanner-overlay');
+  const scannerLabel = document.getElementById('scanner-label');
+
+  function openScanner(targetId, labelText){
+    scanTargetId = targetId;
+    scannerLabel.textContent = labelText;
+    overlay.classList.add('open');
+    html5Qrcode = new Html5Qrcode('reader');
+    html5Qrcode.start(
+      { facingMode: 'environment' },
+      { fps: 12, qrbox: { width: 280, height: 140 } },
+      (decodedText) => {
+        document.getElementById(scanTargetId).value = decodedText;
+        closeScanner();
+        toast('Código capturado', 'ok');
+      },
+      () => { /* frame sem código, ignora */ }
+    ).catch(err => {
+      toast('Não foi possível acessar a câmera. Verifique as permissões e o HTTPS.', 'err');
+      overlay.classList.remove('open');
+    });
+  }
+
+  function closeScanner(){
+    if (html5Qrcode) {
+      html5Qrcode.stop().then(() => html5Qrcode.clear()).catch(() => {});
+    }
+    overlay.classList.remove('open');
+  }
+
+  document.getElementById('close-scan').addEventListener('click', closeScanner);
+
+  document.querySelectorAll('.scan-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const target = btn.getAttribute('data-target');
+      const label = target === 'f-serie' ? 'Número de série' : 'Patrimônio';
+      openScanner(target, label);
+    });
+  });
+
+  // ---- Lista de equipamentos cadastrados ----
+  const FIELD_ORDER = ['Nome','Número de Série','Patrimônio','Setor','Fabricante','Modelo','Endereço MAC','IP','Descrição','Observação'];
+  let allRecords = [];
+
+  function renderLog(){
+    const list = document.getElementById('log-list');
+    list.innerHTML = '';
+    if (!allRecords.length) {
+      list.innerHTML = '<div class="empty">Nenhum equipamento cadastrado ainda.</div>';
+      return;
+    }
+    allRecords.forEach(rec => {
+      const f = rec.fields || {};
+      const item = document.createElement('div');
+      item.className = 'log-item';
+      item.innerHTML = `<span class="name">${f['Nome'] || '(sem nome)'}</span>
+        <span class="meta">Patr: ${f['Patrimônio'] || '—'}<br>Série: ${f['Número de Série'] || '—'}</span>`;
+      list.appendChild(item);
+    });
+  }
+
+  async function fetchRecords(){
+    try {
+      const resp = await fetch(
+        `https://api.airtable.com/v0/${AIRTABLE_CONFIG.baseId}/${encodeURIComponent(AIRTABLE_CONFIG.table)}?sort[0][field]=Nome&sort[0][direction]=asc&pageSize=100`,
+        { headers: { 'Authorization': `Bearer ${AIRTABLE_CONFIG.token}` } }
+      );
+      if (!resp.ok) throw new Error(`Erro ${resp.status}`);
+      const data = await resp.json();
+      allRecords = data.records || [];
+      renderLog();
+    } catch (err) {
+      document.getElementById('log-list').innerHTML =
+        `<div class="empty">Não foi possível carregar a lista (${err.message}).</div>`;
+    }
+  }
+
+  fetchRecords();
+
+  // ---- Exportação ----
+  function csvEscape(val){
+    const s = (val === undefined || val === null) ? '' : String(val);
+    if (/[",\n]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
+    return s;
+  }
+
+  function downloadBlob(content, filename, mime){
+    const blob = new Blob([content], { type: mime });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  function buildRows(){
+    return allRecords.map(rec => FIELD_ORDER.map(k => (rec.fields || {})[k] || ''));
+  }
+
+  document.getElementById('btn-export-csv').addEventListener('click', () => {
+    if (!allRecords.length) { toast('Nada para exportar ainda.', 'err'); return; }
+    const rows = [FIELD_ORDER, ...buildRows()];
+    const csv = '\uFEFF' + rows.map(r => r.map(csvEscape).join(',')).join('\r\n');
+    downloadBlob(csv, 'inventario-equipamentos.csv', 'text/csv;charset=utf-8');
+  });
+
+  document.getElementById('btn-export-xls').addEventListener('click', () => {
+    if (!allRecords.length) { toast('Nada para exportar ainda.', 'err'); return; }
+    const rows = [FIELD_ORDER, ...buildRows()];
+    const escapeHtml = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    const tableHtml = '<table>' + rows.map(r =>
+      '<tr>' + r.map(c => `<td>${escapeHtml(c)}</td>`).join('') + '</tr>'
+    ).join('') + '</table>';
+    const xlsDoc = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+      <head><meta charset="UTF-8"></head><body>${tableHtml}</body></html>`;
+    downloadBlob(xlsDoc, 'inventario-equipamentos.xls', 'application/vnd.ms-excel');
+  });
+
+  document.getElementById('btn-save').addEventListener('click', async () => {
+    const baseId = AIRTABLE_CONFIG.baseId;
+    const table = AIRTABLE_CONFIG.table;
+    const token = AIRTABLE_CONFIG.token;
+
+    const nome = document.getElementById('f-nome').value.trim();
+    const serie = document.getElementById('f-serie').value.trim();
+    const patrimonio = document.getElementById('f-patrimonio').value.trim();
+    const setor = document.getElementById('f-setor').value.trim();
+    const fabricante = document.getElementById('f-fabricante').value.trim();
+    const modelo = document.getElementById('f-modelo').value.trim();
+    const mac = document.getElementById('f-mac').value.trim();
+    const ip = document.getElementById('f-ip').value.trim();
+    const descricao = document.getElementById('f-descricao').value.trim();
+    const obs = document.getElementById('f-obs').value.trim();
+
+    if (!nome) {
+      toast('Informe ao menos o nome do equipamento.', 'err');
+      return;
+    }
+
+    const btn = document.getElementById('btn-save');
+    btn.disabled = true;
+    btn.textContent = 'Salvando...';
+
+    try {
+      const resp = await fetch(`https://api.airtable.com/v0/${baseId}/${encodeURIComponent(table)}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          fields: {
+            'Nome': nome,
+            'Número de Série': serie,
+            'Patrimônio': patrimonio,
+            'Setor': setor,
+            'Fabricante': fabricante,
+            'Modelo': modelo,
+            'Endereço MAC': mac,
+            'IP': ip,
+            'Descrição': descricao,
+            'Observação': obs
+          }
+        })
+      });
+
+      if (!resp.ok) {
+        const errBody = await resp.json().catch(() => ({}));
+        throw new Error(errBody?.error?.message || `Erro ${resp.status}`);
+      }
+
+      const created = await resp.json();
+      allRecords.push(created);
+      allRecords.sort((a, b) => (a.fields?.Nome || '').localeCompare(b.fields?.Nome || ''));
+      renderLog();
+      toast('Equipamento salvo com sucesso.', 'ok');
+      ['f-nome','f-serie','f-patrimonio','f-setor','f-fabricante','f-modelo','f-mac','f-ip','f-descricao','f-obs'].forEach(id => {
+        document.getElementById(id).value = '';
+      });
+    } catch (err) {
+      toast('Falha ao salvar: ' + err.message, 'err');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Salvar equipamento';
+    }
+  });
+</script>
+
+</body>
+</html>
