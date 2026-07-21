@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>Inventário de Equipamentos</title>
+<title>Inventário de Equipamentos CT18</title>
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <style>
   :root{
@@ -88,8 +88,15 @@
   }
   .log-item:last-child{border-bottom:none;}
   .log-item .name{font-weight:600;}
-  .log-item .meta{color:var(--muted);font-family:var(--mono);font-size:11px;}
+  .log-item .meta{color:var(--muted);font-family:var(--mono);font-size:11px;text-align:right;}
   .empty{color:var(--muted);font-size:13px;padding:6px 0;}
+
+  .export-row{display:flex;gap:8px;margin-top:14px;}
+  .export-btn{
+    flex:1;background:var(--panel-2);border:1px solid var(--border);color:var(--text);
+    border-radius:8px;padding:11px;font-size:13px;font-weight:600;
+  }
+  .export-btn:active{border-color:var(--tag);color:var(--tag);}
 </style>
 </head>
 <body>
@@ -163,9 +170,13 @@
   </div>
 
   <div class="card">
-    <div class="settings-label">Últimos cadastrados nesta sessão</div>
+    <div class="settings-label">Equipamentos cadastrados</div>
     <div class="log" id="log-list">
-      <div class="empty">Nenhum equipamento cadastrado ainda.</div>
+      <div class="empty">Carregando...</div>
+    </div>
+    <div class="export-row">
+      <button class="export-btn" id="btn-export-csv" type="button">Exportar CSV</button>
+      <button class="export-btn" id="btn-export-xls" type="button">Exportar Excel</button>
     </div>
   </div>
 </div>
@@ -239,16 +250,86 @@
     });
   });
 
-  // ---- Salvar no Airtable ----
-  function addLogItem(nome, setor){
+  // ---- Lista de equipamentos cadastrados ----
+  const FIELD_ORDER = ['Nome','Número de Série','Patrimônio','Setor','Fabricante','Modelo','Endereço MAC','IP','Descrição','Observação'];
+  let allRecords = [];
+
+  function renderLog(){
     const list = document.getElementById('log-list');
-    const empty = list.querySelector('.empty');
-    if (empty) empty.remove();
-    const item = document.createElement('div');
-    item.className = 'log-item';
-    item.innerHTML = `<span class="name">${nome}</span><span class="meta">${setor || '—'}</span>`;
-    list.prepend(item);
+    list.innerHTML = '';
+    if (!allRecords.length) {
+      list.innerHTML = '<div class="empty">Nenhum equipamento cadastrado ainda.</div>';
+      return;
+    }
+    allRecords.forEach(rec => {
+      const f = rec.fields || {};
+      const item = document.createElement('div');
+      item.className = 'log-item';
+      item.innerHTML = `<span class="name">${f['Nome'] || '(sem nome)'}</span>
+        <span class="meta">Patr: ${f['Patrimônio'] || '—'}<br>Série: ${f['Número de Série'] || '—'}</span>`;
+      list.appendChild(item);
+    });
   }
+
+  async function fetchRecords(){
+    try {
+      const resp = await fetch(
+        `https://api.airtable.com/v0/${AIRTABLE_CONFIG.baseId}/${encodeURIComponent(AIRTABLE_CONFIG.table)}?sort[0][field]=Nome&sort[0][direction]=asc&pageSize=100`,
+        { headers: { 'Authorization': `Bearer ${AIRTABLE_CONFIG.token}` } }
+      );
+      if (!resp.ok) throw new Error(`Erro ${resp.status}`);
+      const data = await resp.json();
+      allRecords = data.records || [];
+      renderLog();
+    } catch (err) {
+      document.getElementById('log-list').innerHTML =
+        `<div class="empty">Não foi possível carregar a lista (${err.message}).</div>`;
+    }
+  }
+
+  fetchRecords();
+
+  // ---- Exportação ----
+  function csvEscape(val){
+    const s = (val === undefined || val === null) ? '' : String(val);
+    if (/[",\n]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
+    return s;
+  }
+
+  function downloadBlob(content, filename, mime){
+    const blob = new Blob([content], { type: mime });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  function buildRows(){
+    return allRecords.map(rec => FIELD_ORDER.map(k => (rec.fields || {})[k] || ''));
+  }
+
+  document.getElementById('btn-export-csv').addEventListener('click', () => {
+    if (!allRecords.length) { toast('Nada para exportar ainda.', 'err'); return; }
+    const rows = [FIELD_ORDER, ...buildRows()];
+    const csv = '\uFEFF' + rows.map(r => r.map(csvEscape).join(',')).join('\r\n');
+    downloadBlob(csv, 'inventario-equipamentos.csv', 'text/csv;charset=utf-8');
+  });
+
+  document.getElementById('btn-export-xls').addEventListener('click', () => {
+    if (!allRecords.length) { toast('Nada para exportar ainda.', 'err'); return; }
+    const rows = [FIELD_ORDER, ...buildRows()];
+    const escapeHtml = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    const tableHtml = '<table>' + rows.map(r =>
+      '<tr>' + r.map(c => `<td>${escapeHtml(c)}</td>`).join('') + '</tr>'
+    ).join('') + '</table>';
+    const xlsDoc = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+      <head><meta charset="UTF-8"></head><body>${tableHtml}</body></html>`;
+    downloadBlob(xlsDoc, 'inventario-equipamentos.xls', 'application/vnd.ms-excel');
+  });
 
   document.getElementById('btn-save').addEventListener('click', async () => {
     const baseId = AIRTABLE_CONFIG.baseId;
@@ -303,7 +384,10 @@
         throw new Error(errBody?.error?.message || `Erro ${resp.status}`);
       }
 
-      addLogItem(nome, setor);
+      const created = await resp.json();
+      allRecords.push(created);
+      allRecords.sort((a, b) => (a.fields?.Nome || '').localeCompare(b.fields?.Nome || ''));
+      renderLog();
       toast('Equipamento salvo com sucesso.', 'ok');
       ['f-nome','f-serie','f-patrimonio','f-setor','f-fabricante','f-modelo','f-mac','f-ip','f-descricao','f-obs'].forEach(id => {
         document.getElementById(id).value = '';
