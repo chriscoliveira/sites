@@ -50,11 +50,10 @@
     "nome": "Codigos de Barra",
     "link": "https://chriscoliveira.github.io/codigobarras/",
     "tag": "UTI"
-  }
-,
+  },
 {
     "nome": "Dicker help",
     "link": "https://chriscoliveira.github.io/docker-help/Guia%20Docker.html",
-    "tag": "Tenda"
-  },
-  ]
+    "tag": "code"
+  }
+]
